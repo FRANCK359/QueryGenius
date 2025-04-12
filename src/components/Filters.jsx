@@ -1,48 +1,33 @@
-import { useState } from "react";
-import * as Select from "@radix-ui/react-select";
-import { Check, ChevronDown } from "lucide-react";
-import "../index.css";
+import React from 'react';
+import { Button } from "../ui/button";
 
-export default function Filters({ onFilterChange }) {
-  const [sortBy, setSortBy] = useState("pertinence");
-
-  const handleSortChange = (value) => {
-    setSortBy(value);
-    onFilterChange(value);
-  };
+export default function Filters({ activeFilter, onFilterChange, aiEnabled = true }) {
+  const filters = [
+    { id: "pertinence", label: "Pertinence", icon: "🏆" },
+    { id: "date", label: "Date", icon: "📅" },
+    { id: "category", label: "Catégorie", icon: "🏷️" },
+    { id: "ia-score", label: "Score IA", icon: "🧠" }
+  ];
 
   return (
     <div className="filters-container">
-      <Select.Root value={sortBy} onValueChange={handleSortChange}>
-        <Select.Trigger className="custom-select">
-          <Select.Value placeholder="Trier par" />
-          <ChevronDown className="ml-2 w-4 h-4" />
-        </Select.Trigger>
-        <Select.Portal>
-          <Select.Content className="custom-select-content">
-            <Select.Viewport className="p-2 bg-white dark:bg-gray-800 shadow-lg rounded-lg">
-              <SelectItem value="pertinence">Pertinence</SelectItem>
-              <SelectItem value="date">Date</SelectItem>
-              <SelectItem value="categorie">Catégorie</SelectItem>
-            </Select.Viewport>
-          </Select.Content>
-        </Select.Portal>
-      </Select.Root>
+      <div className="flex flex-wrap gap-2 justify-center md:justify-start">
+        {filters.map(filter => (
+          <Button
+            key={filter.id}
+            onClick={() => onFilterChange(filter.id)}
+            className={`filter-button ${activeFilter === filter.id ? 'active' : ''}`}
+            aria-label={`Filtrer par ${filter.label}`}
+            aria-pressed={activeFilter === filter.id ? 'true' : 'false'} // Accessibilité améliorée
+          >
+            <span className="filter-icon">{filter.icon}</span>
+            {filter.label}
+            {filter.id === "ia-score" && aiEnabled && (
+              <span className="ai-indicator"></span>
+            )}
+          </Button>
+        ))}
+      </div>
     </div>
-  );
-}
-
-// ✅ Composant réutilisable pour SelectItem
-function SelectItem({ children, value }) {
-  return (
-    <Select.Item
-      value={value}
-      className="custom-select-item flex items-center gap-2 p-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-all"
-    >
-      <Select.ItemText>{children}</Select.ItemText>
-      <Select.ItemIndicator>
-        <Check className="w-4 h-4 text-blue-500" />
-      </Select.ItemIndicator>
-    </Select.Item>
   );
 }

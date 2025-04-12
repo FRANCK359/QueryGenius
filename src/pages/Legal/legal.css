@@ -1,0 +1,20 @@
+/* src/pages/Legal/legal.css */
+.legal-header {
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+  
+  .legal-content section {
+    margin-bottom: 2.5rem;
+  }
+  
+  .legal-content h2 {
+    color: var(--primary);
+    margin-bottom: 1rem;
+  }
+  
+  @media (max-width: 768px) {
+    .legal-content {
+      padding: 0 1rem;
+    }
+  }

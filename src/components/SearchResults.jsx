@@ -1,18 +1,19 @@
 import { Card, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
 import { motion } from "framer-motion";
+import { useMemo } from "react";
 
 export default function SearchResults({ results, page, setPage, resultsPerPage }) {
-  // Tri correct par titre en ordre alphanumérique
-  const sortedResults = [...results].sort((a, b) =>
-    a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: "base" })
-  );
+  // Utilisation de useMemo pour éviter les recalculs inutiles des résultats paginés
+  const sortedResults = useMemo(() => {
+    return [...results].sort((a, b) =>
+      a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: "base" })
+    );
+  }, [results]);
 
-  // Découpage des résultats paginés
-  const paginatedResults = sortedResults.slice(
-    (page - 1) * resultsPerPage,
-    page * resultsPerPage
-  );
+  const paginatedResults = useMemo(() => {
+    return sortedResults.slice((page - 1) * resultsPerPage, page * resultsPerPage);
+  }, [sortedResults, page, resultsPerPage]);
 
   return (
     <>

@@ -1,55 +1,56 @@
 import { useEffect, useState } from "react";
 import { Button } from "../ui/button";
 import { Sun, Moon } from "lucide-react";
-import "../index.css";
 
 export default function DarkModeToggle() {
-  // Récupérer le mode sombre au chargement
   const [darkMode, setDarkMode] = useState(() => {
-    return localStorage.getItem("darkMode") === "enabled";
+    const savedMode = localStorage.getItem("darkMode");
+    return savedMode
+      ? savedMode === "enabled"
+      : window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
+  
+  const [loading, setLoading] = useState(false);
 
-  // Appliquer le mode sombre dès le montage du composant
   useEffect(() => {
-    if (darkMode) {
-      document.body.classList.add("dark");
-    } else {
-      document.body.classList.remove("dark");
-    }
+    setLoading(true);
+    document.documentElement.className = darkMode ? "dark" : "light";
+    document.body.style.transition = "background 1s ease, opacity 1s ease";
+    document.body.style.opacity = "0";
+
+    setTimeout(() => {
+      document.body.style.backgroundImage = darkMode
+      ? "url('https://img.static-rmg.be/a/view/q75/w1600/h836/5643169/gettyimages-1426131553-jpg.jpg')"
+      : "url('https://www.afrik.com/wp-content/uploads/2024/11/intelligence-artificielle-696x392.jpg')";
+
+
+      document.body.style.opacity = "1";
+      setLoading(false);
+    }, 500); // Durée pour la transition fade
+
+    localStorage.setItem("darkMode", darkMode ? "enabled" : "disabled");
   }, [darkMode]);
 
-  // Gérer le changement de mode
-  const toggleDarkMode = () => {
-    setDarkMode((prevMode) => {
-      const newMode = !prevMode;
-      if (newMode) {
-        document.body.classList.add("dark");
-        localStorage.setItem("darkMode", "enabled");
-      } else {
-        document.body.classList.remove("dark");
-        localStorage.setItem("darkMode", "disabled");
-      }
-      return newMode;
-    });
-  };
+  const toggleDarkMode = () => setDarkMode(prev => !prev);
 
   return (
-    <div className="transition-all duration-700 ease-in-out">
-      {/* Bouton */}
+    <div className={`dark-mode-container ${darkMode ? "dark" : "light"}`}>
+      {loading && (
+        <div className="loading-spinner">
+          <div className="spinner"></div>
+        </div>
+      )}
       <Button
         onClick={toggleDarkMode}
-        aria-label="Toggle Dark Mode"
-        className={`relative z-10 dark-mode-toggle rounded-full p-3 flex items-center justify-center transition-all duration-500 ease-in-out transform hover:scale-105 focus:outline-none shadow-lg border-2 ${
-          darkMode
-            ? "bg-gray-900 text-yellow-400 border-yellow-400 hover:bg-gray-800"
-            : "bg-yellow-400 text-gray-900 border-gray-900 hover:bg-yellow-300"
-        }`}
+        aria-label={darkMode ? "Mode clair" : "Mode sombre"}
+        className="dark-mode-btn"
+        variant="ghost"
       >
-        <div className="toggle-icon transition-transform duration-500 ease-in-out">
+        <div className="icon-wrapper">
           {darkMode ? (
-            <Sun size={24} className="rotate-[360deg] transition-all duration-500" />
+            <Sun className="mode-icon spin-once" size={22} />
           ) : (
-            <Moon size={24} className="rotate-[360deg] transition-all duration-500" />
+            <Moon className="mode-icon spin-once" size={22} />
           )}
         </div>
       </Button>

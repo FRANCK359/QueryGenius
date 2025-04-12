@@ -1,51 +1,111 @@
 import React from 'react';
-import { FaTwitter, FaGithub, FaLinkedin, FaBrain } from "react-icons/fa";
+import { Link } from 'react-router-dom';  // Importation de Link pour la navigation
+import { FaTwitter, FaGithub, FaLinkedin, FaBrain, FaWhatsapp, FaFacebook, FaInstagram } from "react-icons/fa";
 
 export default function Footer() {
+  const currentYear = new Date().getFullYear();
+
+  const links = [
+    { title: "Confidentialité", url: "/privacy" },
+    { title: "Conditions", url: "/terms" },
+    { title: "Éthique IA", url: "/ai-ethics" },
+    { title: "API", url: "/api" },
+    { title: "FAQ", url: "/faq" }
+  ];
+
+  const socialLinks = [
+    { icon: <FaTwitter />, url: "https://twitter.com", name: "Twitter" },
+    { icon: <FaGithub />, url: "https://github.com", name: "GitHub" },
+    { icon: <FaLinkedin />, url: "https://linkedin.com", name: "LinkedIn" },
+    { icon: <FaWhatsapp />, url: "https://wa.me", name: "WhatsApp" },
+    { icon: <FaFacebook />, url: "https://facebook.com", name: "Facebook" },
+    { icon: <FaInstagram />, url: "https://instagram.com", name: "Instagram" }
+  ];
+
   return (
-    <footer className="footer bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 py-4">
-      <div className="container mx-auto px-4">
-        {/* Contenu principal centré */}
-        <div className="flex flex-col items-center justify-center gap-3">
-          {/* Logo et copyright */}
-          <div className="flex items-center">
-            <FaBrain className="text-blue-600 text-xl mr-2" />
-            <p className="text-sm font-semibold">
-              &copy; {new Date().getFullYear()} Moteur de Recherche IA
+    <footer className="footer">
+      <div className="footer-container">
+        {/* Section Principale */}
+        <div className="footer-main">
+          {/* Logo et Description */}
+          <div className="footer-brand">
+            <div className="footer-logo">
+              <FaBrain className="logo-icon" />
+              <span>Moteur IA</span>
+            </div>
+            <p className="footer-description">
+              Une nouvelle ère de recherche intelligente, propulsée par l'intelligence artificielle.
             </p>
           </div>
 
-          {/* Liens centrés */}
-          <div className="flex space-x-4 justify-center">
-            <a href="/privacy" className="text-xs hover:text-blue-600 transition-colors">
-              Confidentialité
-            </a>
-            <a href="/terms" className="text-xs hover:text-blue-600 transition-colors">
-              Conditions
-            </a>
-            <a href="/ai-ethics" className="text-xs hover:text-blue-600 transition-colors">
-              Éthique de l'IA
-            </a>
+          {/* Liens Rapides */}
+          <div className="footer-links">
+            <h3 className="footer-links-title">Navigation</h3>
+            <ul>
+              {links.map((link, index) => (
+                <li key={index}>
+                  <a href={link.url} className="footer-link">{link.title}</a>
+                </li>
+              ))}
+            </ul>
           </div>
 
-          {/* Icônes sociales centrées */}
-          <div className="flex space-x-3 justify-center">
-            <a href="https://twitter.com" className="hover:text-blue-400 transition-colors text-lg">
-              <FaTwitter />
-            </a>
-            <a href="https://github.com" className="hover:text-gray-700 dark:hover:text-gray-300 transition-colors text-lg">
-              <FaGithub />
-            </a>
-            <a href="https://linkedin.com" className="hover:text-blue-700 transition-colors text-lg">
-              <FaLinkedin />
-            </a>
+          {/* Contact */}
+          <div className="footer-contact">
+            <h3 className="footer-links-title">Contact</h3>
+            <ul>
+              <li>contact@moteuria.com</li>
+              <li>+33 1 23 45 67 89</li>
+              <li>Paris, France</li>
+            </ul>
           </div>
 
-          {/* Texte info centré */}
-          <div className="text-center text-xs text-gray-500 dark:text-gray-400 mt-1">
-            <p>Ce projet utilise une intelligence artificielle avancée pour traiter vos requêtes.</p>
+          {/* Newsletter */}
+          <div className="footer-newsletter">
+            <h3 className="footer-links-title">Restez informé</h3>
+            <form className="newsletter-form">
+              <input type="email" placeholder="Votre email" aria-label="Email pour newsletter" />
+              <button type="submit">S'abonner</button>
+            </form>
           </div>
         </div>
+
+        {/* Section Secondaire */}
+        <div className="footer-secondary">
+          {/* Copyright */}
+          <div className="footer-copyright">
+            &copy; {currentYear} Moteur de Recherche IA. Tous droits réservés.
+          </div>
+
+          {/* Réseaux Sociaux */}
+          <div className="footer-social">
+            {socialLinks.map((social, index) => (
+              <a 
+                key={index}
+                href={social.url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="social-icon"
+                aria-label={`Suivez-nous sur ${social.name}`}
+              >
+                {social.icon}
+              </a>
+            ))}
+          </div>
+
+          {/* Mentions */}
+          <div className="footer-legal">
+            <Link to="/mentions-legales">Mentions légales</Link>
+            <span>•</span>
+            <Link to="/politique-cookies">Politique des cookies</Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Badge IA */}
+      <div className="footer-ai-badge">
+        <span>Propulsé par une IA de pointe</span>
+        <div className="ai-pulse"></div>
       </div>
     </footer>
   );

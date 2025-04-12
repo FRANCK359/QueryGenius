@@ -17,6 +17,14 @@ export default function Contact() {
   useEffect(() => {
     const userPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     setTheme(userPrefersDark ? 'dark' : 'light');
+
+    // Écouter les changements de préférence de thème
+    const themeListener = window.matchMedia("(prefers-color-scheme: dark)");
+    themeListener.addEventListener('change', (e) => {
+      setTheme(e.matches ? 'dark' : 'light');
+    });
+
+    return () => themeListener.removeEventListener('change', () => {});
   }, []);
 
   const handleChange = (e) => {
@@ -62,7 +70,7 @@ export default function Contact() {
 
       {/* États de réponse */}
       {submitStatus && (
-        <div className={`ai-response ${submitStatus}`}>
+        <div className={`ai-response ${submitStatus}`} role="alert" aria-live="assertive">
           {submitStatus === 'success' && (
             <>
               <h3>✔ Succès</h3>
