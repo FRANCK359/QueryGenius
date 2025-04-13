@@ -1,8 +1,5 @@
-// hooks/useSearchOperations.js
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { search as apiSearch, getSearchSuggestions, getSearchHistory } from '../services/searchService';
-
-let debounceTimeout; // Variable pour gérer le debounce
 
 export function useSearchOperations() {
   const [results, setResults] = useState([]);
@@ -10,23 +7,29 @@ export function useSearchOperations() {
   const [history, setHistory] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState(null);
+  const [hasSearchedOnce, setHasSearchedOnce] = useState(false);
 
-  // Fonction de recherche avec debounce
+  const debounceTimeout = useRef(null);
+  const suggestionCache = useRef({}); // Pour éviter les requêtes répétées sur le même mot
+
   const performSearch = useCallback(async (query, filters = {}) => {
     setIsSearching(true);
     setError(null);
+
     try {
       const data = await apiSearch(query, filters);
-      setResults(data.results);
+      setResults(data.results || []);
+      setHasSearchedOnce(true);
 
-      // Ajout de la recherche à l'historique
-      setHistory((prevHistory) => {
-        const newHistory = [query, ...prevHistory.filter((item) => item !== query)];
-        return newHistory.slice(0, 5); // Limite l'historique à 5 éléments
+      // Mise à jour de l’historique
+      setHistory((prev) => {
+        const newHistory = [query, ...prev.filter((q) => q !== query)];
+        return newHistory.slice(0, 5);
       });
 
       return data;
     } catch (err) {
+      console.error('Search error:', err);
       setError('Une erreur est survenue lors de la recherche.');
       throw err;
     } finally {
@@ -34,36 +37,53 @@ export function useSearchOperations() {
     }
   }, []);
 
-  // Mise à jour des suggestions avec debounce
   const updateSuggestions = useCallback((query) => {
-    if (debounceTimeout) clearTimeout(debounceTimeout);
-    
-    debounceTimeout = setTimeout(async () => {
-      if (query.length > 2) { // Limite à 3 caractères pour lancer les suggestions
-        try {
-          const data = await getSearchSuggestions(query);
-          setSuggestions(data);
-        } catch (err) {
-          console.error('Failed to get suggestions:', err);
-          setSuggestions([]); // Si échec, ne rien afficher.
-        }
+    if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
+
+    debounceTimeout.current = setTimeout(async () => {
+      if (query.length <= 2) {
+        setSuggestions([]);
+        return;
       }
-    }, 300); // 300ms de délai avant d'appeler l'API
+
+      // Utilise le cache si disponible
+      if (suggestionCache.current[query]) {
+        setSuggestions(suggestionCache.current[query]);
+        return;
+      }
+
+      try {
+        const data = await getSearchSuggestions(query);
+        setSuggestions(data);
+        suggestionCache.current[query] = data; // Mise en cache
+      } catch (err) {
+        console.error('Suggestions error:', err);
+        setSuggestions([]);
+      }
+    }, 300);
   }, []);
 
-  // Chargement de l'historique depuis l'API ou du stockage local
   const loadHistory = useCallback(async () => {
     try {
       const data = await getSearchHistory();
       setHistory(data);
     } catch (err) {
-      console.error('Failed to load history:', err);
-      setHistory([]); // Retourne un tableau vide en cas d'erreur.
+      console.error('Load history error:', err);
+      setHistory([]);
     }
   }, []);
 
+  const clearResults = () => {
+    setResults([]);
+    setHasSearchedOnce(false);
+  };
+
   useEffect(() => {
     loadHistory();
+
+    return () => {
+      if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
+    };
   }, [loadHistory]);
 
   return {
@@ -72,8 +92,10 @@ export function useSearchOperations() {
     history,
     isSearching,
     error,
+    hasSearchedOnce,
     performSearch,
     updateSuggestions,
-    loadHistory
+    loadHistory,
+    clearResults
   };
 }

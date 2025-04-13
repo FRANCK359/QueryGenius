@@ -1,8 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
+// Contexts
 import { SearchProvider } from './context/SearchContext';
 import { ThemeProvider } from './context/ThemeContext';
-import ErrorBoundary from './components/ErrorBoundary';
+
+// Pages
 import Home from './pages/Home';
 import About from './pages/About';
 import Contact from './pages/Contact';
@@ -13,13 +18,18 @@ import PolitiqueCookies from './pages/Legal/PolitiqueCookies';
 import Api from './pages/Api/Api';
 import Faq from './pages/Faq/Faq';
 import NotFound from './pages/NotFound';
+
+// Components
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import AIBadge from './components/AIBadge';
 import AdvancedSearch from './components/AdvancedSearch';
+import ErrorBoundary from './components/ErrorBoundary';
+
+// Hooks
 import useAnalytics from './hooks/useAnalytics';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+
+// Styles
 import './index.css';
 
 function AppWrapper() {
@@ -39,7 +49,7 @@ function AppWrapper() {
     return (
       <div className="app-loader">
         <div className="ai-loader-content">
-          <AIBadge pulse={true} />
+          <AIBadge pulse />
           <p>Initialisation des systèmes IA...</p>
           <div className="loading-progress">
             <div className="progress-bar" style={{ width: '75%' }}></div>
@@ -128,9 +138,9 @@ function GlobalEffects() {
       <div 
         className="ai-particle-layer" 
         style={{ '--x': `${mousePosition.x}%`, '--y': `${mousePosition.y}%` }}
-      ></div>
-      <div className="ai-gradient-overlay"></div>
-      <div className="ai-connection-lines"></div>
+      />
+      <div className="ai-gradient-overlay" />
+      <div className="ai-connection-lines" />
     </div>
   );
 }

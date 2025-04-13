@@ -12,30 +12,29 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState("pertinence");
-  const { results, suggestions, isSearching, error, performSearch, updateSuggestions } = useSearchOperations();
   const resultsPerPage = 8;
+
+  const { results, suggestions, isSearching, error, performSearch, updateSuggestions } = useSearchOperations();
 
   // Filtrage et tri des résultats
   const filteredResults = useMemo(() => {
-    let sorted = [...results];
+    let sortedResults = [...results];
     switch (sortBy) {
       case "date":
-        sorted.sort((a, b) => b.date - a.date);
+        sortedResults.sort((a, b) => b.date - a.date);
         break;
       case "category":
-        sorted.sort((a, b) => a.category.localeCompare(b.category));
+        sortedResults.sort((a, b) => a.category.localeCompare(b.category));
         break;
       case "ia-score":
-        sorted.sort((a, b) => b.aiScore - a.aiScore);
+        sortedResults.sort((a, b) => b.aiScore - a.aiScore);
         break;
       default:
-        sorted.sort((a, b) =>
-          query ? 
-            (b.title.toLowerCase().includes(query.toLowerCase()) ? 1 : -1) : 
-            b.aiScore - a.aiScore
+        sortedResults.sort((a, b) =>
+          query ? (b.title.toLowerCase().includes(query.toLowerCase()) ? 1 : -1) : b.aiScore - a.aiScore
         );
     }
-    return sorted;
+    return sortedResults;
   }, [query, sortBy, results]);
 
   // Suggestions basées sur la requête
@@ -45,31 +44,37 @@ export default function Home() {
     }
   }, [query, updateSuggestions]);
 
-  const handleFilterChange = (criteria) => {
-    setSortBy(criteria);
-  };
-
+  // Gestion de la recherche
   const handleSearchChange = async (e) => {
     const newQuery = e.target.value;
     setQuery(newQuery);
+    setPage(1); // Réinitialiser la page lors d'un changement de recherche
     if (newQuery.length > 2) {
       try {
-        await performSearch(newQuery); // Appel de la fonction performSearch pour effectuer la recherche
+        await performSearch(newQuery); // Appel de la fonction performSearch
       } catch (err) {
         console.error("Erreur lors de la recherche :", err);
       }
     }
   };
 
-  // Fonction de gestion de la pagination
+  // Gestion de la pagination
   const handlePageChange = (newPage) => {
-    if (newPage >= 1 && newPage <= Math.ceil(filteredResults.length / resultsPerPage)) {
+    const totalPages = Math.ceil(filteredResults.length / resultsPerPage);
+    if (newPage >= 1 && newPage <= totalPages) {
       setPage(newPage);
     }
   };
 
+  // Gestion du changement de filtre
+  const handleFilterChange = (criteria) => {
+    setSortBy(criteria);
+    setPage(1); // Réinitialiser la page lors d'un changement de filtre
+  };
+
   return (
     <div className="home-container">
+      {/* Hero Section */}
       <div className="hero-section">
         <h1 className="hero-title">
           Moteur de Recherche Intelligent
@@ -80,6 +85,7 @@ export default function Home() {
         </p>
       </div>
 
+      {/* Search Section */}
       <div className="search-section">
         <Input
           placeholder="Posez votre question à l'IA..."
@@ -96,6 +102,7 @@ export default function Home() {
         />
       </div>
 
+      {/* Loader / Error / Search Results */}
       {isSearching ? (
         <motion.div className="loader-container" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
           <Loader />
@@ -106,12 +113,18 @@ export default function Home() {
           <p>Une erreur est survenue lors de la recherche. Veuillez réessayer.</p>
         </div>
       ) : filteredResults.length > 0 ? (
-        <SearchResults
-          results={filteredResults} // Passe les résultats complets ici
-          page={page}
-          setPage={handlePageChange} // Gestion de la page dans SearchResults
-          resultsPerPage={resultsPerPage}
-        />
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <SearchResults
+            results={filteredResults.slice((page - 1) * resultsPerPage, page * resultsPerPage)}
+            page={page}
+            setPage={handlePageChange}
+            resultsPerPage={resultsPerPage}
+          />
+        </motion.div>
       ) : (
         <div className="no-results">
           <h3>Aucun résultat trouvé pour "{query}"</h3>
