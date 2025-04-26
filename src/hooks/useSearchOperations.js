@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { search as apiSearch, getSearchSuggestions, getSearchHistory } from '../services/searchService';
+import { searchService } from '../services/searchService';
 
 export function useSearchOperations() {
   const [results, setResults] = useState([]);
@@ -10,52 +10,75 @@ export function useSearchOperations() {
   const [hasSearchedOnce, setHasSearchedOnce] = useState(false);
 
   const debounceTimeout = useRef(null);
-  const suggestionCache = useRef({}); // Pour éviter les requêtes répétées sur le même mot
+  const suggestionCache = useRef(new Map());
+  const abortControllerRef = useRef(null);
 
-  const performSearch = useCallback(async (query, filters = {}) => {
+  const performSearch = useCallback(async (query, filters = {}, preferences = {}) => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
     setIsSearching(true);
     setError(null);
 
     try {
-      const data = await apiSearch(query, filters);
-      setResults(data.results || []);
-      setHasSearchedOnce(true);
+      const combinedFilters = {
+        ...filters,
+        safeSearch: preferences.safeSearch !== undefined ? preferences.safeSearch : true,
+        language: preferences.language || 'fr',
+      };
 
-      // Mise à jour de l’historique
-      setHistory((prev) => {
-        const newHistory = [query, ...prev.filter((q) => q !== query)];
-        return newHistory.slice(0, 5);
+      const data = await searchService.search(query, combinedFilters, {
+        signal: abortControllerRef.current.signal
       });
 
-      return data;
+      setResults(data?.results || []);
+      setHasSearchedOnce(true);
+
+      setHistory(prev => {
+        const newHistory = [
+          { query, timestamp: Date.now() },
+          ...prev.filter(item => item.query !== query)
+        ];
+        return newHistory.slice(0, preferences.maxHistoryItems || 10);
+      });
     } catch (err) {
-      console.error('Search error:', err);
-      setError('Une erreur est survenue lors de la recherche.');
-      throw err;
+      if (err.name !== 'AbortError') {
+        setError(err.message || 'Une erreur est survenue lors de la recherche');
+        console.error('Search error:', err);
+      }
     } finally {
       setIsSearching(false);
+      abortControllerRef.current = null;
     }
   }, []);
 
-  const updateSuggestions = useCallback((query) => {
-    if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
+  const updateSuggestions = useCallback((query, preferences = {}) => {
+    if (debounceTimeout.current) {
+      clearTimeout(debounceTimeout.current);
+    }
+
+    if (!query || query.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+
+    const cached = suggestionCache.current.get(query);
+    if (cached) {
+      setSuggestions(cached);
+      return;
+    }
 
     debounceTimeout.current = setTimeout(async () => {
-      if (query.length <= 2) {
-        setSuggestions([]);
-        return;
-      }
-
-      // Utilise le cache si disponible
-      if (suggestionCache.current[query]) {
-        setSuggestions(suggestionCache.current[query]);
-        return;
-      }
-
       try {
-        const data = await getSearchSuggestions(query);
-        setSuggestions(data);
-        suggestionCache.current[query] = data; // Mise en cache
+        const data = await searchService.getSuggestions(query, {
+          language: preferences.language || 'fr'
+        });
+
+        const safeSuggestions = Array.isArray(data) ? data : [];
+        suggestionCache.current.set(query, safeSuggestions);
+        setSuggestions(safeSuggestions);
       } catch (err) {
         console.error('Suggestions error:', err);
         setSuggestions([]);
@@ -65,24 +88,41 @@ export function useSearchOperations() {
 
   const loadHistory = useCallback(async () => {
     try {
-      const data = await getSearchHistory();
-      setHistory(data);
+      const data = await searchService.getHistory();
+      setHistory(Array.isArray(data) 
+        ? data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+        : []);
     } catch (err) {
-      console.error('Load history error:', err);
+      console.error('History load error:', err);
       setHistory([]);
     }
   }, []);
 
-  const clearResults = () => {
+  const clearResults = useCallback(() => {
     setResults([]);
     setHasSearchedOnce(false);
-  };
+    setError(null);
+  }, []);
+
+  const clearHistory = useCallback(async () => {
+    try {
+      await searchService.clearHistory();
+      setHistory([]);
+    } catch (err) {
+      console.error('Clear history error:', err);
+    }
+  }, []);
 
   useEffect(() => {
     loadHistory();
 
     return () => {
-      if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
+      if (debounceTimeout.current) {
+        clearTimeout(debounceTimeout.current);
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
     };
   }, [loadHistory]);
 
@@ -96,6 +136,7 @@ export function useSearchOperations() {
     performSearch,
     updateSuggestions,
     loadHistory,
-    clearResults
+    clearResults,
+    clearHistory
   };
 }

@@ -1,106 +1,258 @@
 import { toast } from 'react-toastify';
+import { v4 as uuidv4 } from 'uuid';
 
 const API_URL = process.env.REACT_APP_API_URL || 'https://api.moteuria.com/v1';
 
+// ---------- Initial Setup ----------
 if (!process.env.REACT_APP_API_URL) {
-  toast.warn("API en mode démo, certaines fonctionnalités peuvent être limitées.");
+  toast.warn("API en mode démo - données limitées", {
+    autoClose: 5000,
+    toastId: 'demo-warning'
+  });
 }
 
-let suggestionCache = {}; // Cache local avec timestamps
-
-// ---------- Gestion des erreurs ----------
-const handleError = (message) => {
-  console.error(message);
-  toast.error(message);
-};
-
-// ---------- Token ----------
-const getToken = () => {
-  const token = localStorage.getItem('token');
-  if (!token) {
-    handleError("Token d'authentification manquant. Veuillez vous reconnecter.");
-    throw new Error("Token d'authentification manquant");
+// ---------- Error Handling ----------
+const handleError = (error, context = '') => {
+  console.error(`[API Error] ${context}:`, error);
+  
+  let userMessage = "Une erreur est survenue";
+  if (error.response?.status === 401) {
+    userMessage = "Session expirée - Veuillez vous reconnecter";
+    // Optional: Redirect to login
+  } else if (error.response?.status === 429) {
+    userMessage = "Trop de requêtes - Veuillez patienter";
+  } else if (error.message) {
+    userMessage = error.message;
   }
-  return token;
-};
 
-// ---------- Requête API centralisée ----------
-const apiRequest = async (endpoint, options = {}, requireAuth = true) => {
-  const headers = { 'Content-Type': 'application/json', ...options.headers };
-  if (requireAuth) headers['Authorization'] = `Bearer ${getToken()}`;
-
-  try {
-    toast.loading('Chargement en cours...', { toastId: 'api-loading' });
-
-    const response = await fetch(`${API_URL}${endpoint}`, { ...options, headers });
-
-    if (!response.ok) {
-      throw new Error(`Erreur API: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    handleError(error.message);
-    throw error;
-  } finally {
-    toast.dismiss('api-loading');
-  }
-};
-
-// ---------- Requête de recherche ----------
-export const search = (query, filters = {}, preferences = {}) =>
-  apiRequest('/search', {
-    method: 'POST',
-    body: JSON.stringify({ query, filters, preferences }),
+  toast.error(userMessage, {
+    toastId: `error-${uuidv4()}`,
+    autoClose: 5000
   });
 
-// ---------- Suggestions avec cache + durée ----------
-const isCacheValid = (entry) => {
-  const maxAge = 5 * 60 * 1000; // 5 minutes
-  return entry && (Date.now() - entry.timestamp < maxAge);
+  return { error: true, message: userMessage };
 };
 
-export const getSearchSuggestions = async (query) => {
-  const cacheEntry = suggestionCache[query];
-  if (isCacheValid(cacheEntry)) {
-    console.log('Suggestions depuis le cache :', cacheEntry.data);
-    return cacheEntry.data;
+// ---------- Token Management ----------
+const getToken = () => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error("Token manquant");
+    
+    // Basic token structure validation
+    if (token.split('.').length !== 3) {
+      throw new Error("Token invalide");
+    }
+    
+    return token;
+  } catch (error) {
+    handleError(error, "Authentification");
+    throw error;
+  }
+};
+
+// ---------- Core API Request ----------
+const apiRequest = async (endpoint, options = {}, requireAuth = true) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+  const headers = { 
+    'Content-Type': 'application/json',
+    'X-Request-ID': uuidv4(),
+    ...options.headers 
+  };
+
+  if (requireAuth) {
+    try {
+      headers['Authorization'] = `Bearer ${getToken()}`;
+    } catch (error) {
+      return { error: true, message: error.message };
+    }
   }
 
+  const loadingToast = toast.loading("Traitement en cours...", {
+    toastId: `loading-${endpoint}`,
+    autoClose: false
+  });
+
   try {
-    const response = await fetch(`${API_URL}/suggestions?q=${encodeURIComponent(query)}`);
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      ...options,
+      headers,
+      signal: controller.signal,
+      body: options.body ? JSON.stringify(options.body) : undefined
+    });
+
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
-      throw new Error(`Erreur API lors de la récupération des suggestions: ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Erreur ${response.status}`);
     }
 
     const data = await response.json();
-    suggestionCache[query] = { data, timestamp: Date.now() };
+    toast.dismiss(loadingToast);
+    
     return data;
   } catch (error) {
-    handleError(`Erreur lors de la récupération des suggestions : ${error.message}`);
-    return [];
+    clearTimeout(timeoutId);
+    toast.dismiss(loadingToast);
+    return handleError(error, `API Request to ${endpoint}`);
   }
 };
 
-// ---------- Historique ----------
-export const getSearchHistory = () => apiRequest('/search/history');
+// ---------- Enhanced Caching System ----------
+class ApiCache {
+  constructor(name, ttl = 300000) {
+    this.name = name;
+    this.ttl = ttl;
+    this.dbPromise = this.initDB();
+  }
 
-// ---------- Préférences utilisateur ----------
-export const saveUserPreferences = (preferences) => {
-  try {
-    localStorage.setItem('userPreferences', JSON.stringify(preferences));
-  } catch (error) {
-    handleError("Échec de la sauvegarde des préférences.");
+  async initDB() {
+    if (!window.indexedDB) return null;
+    
+    return new Promise((resolve) => {
+      const request = indexedDB.open('ApiCacheDB', 1);
+      
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains(this.name)) {
+          db.createObjectStore(this.name, { keyPath: 'key' });
+        }
+      };
+      
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => {
+        console.warn("IndexedDB initialization failed");
+        resolve(null);
+      };
+    });
+  }
+
+  async get(key) {
+    const db = await this.dbPromise;
+    if (!db) return null;
+    
+    return new Promise((resolve) => {
+      const transaction = db.transaction([this.name], 'readonly');
+      const store = transaction.objectStore(this.name);
+      const request = store.get(key);
+      
+      request.onsuccess = () => {
+        const entry = request.result;
+        if (entry && (Date.now() - entry.timestamp < this.ttl)) {
+          resolve(entry.value);
+        } else {
+          resolve(null);
+        }
+      };
+      
+      request.onerror = () => resolve(null);
+    });
+  }
+
+  async set(key, value) {
+    const db = await this.dbPromise;
+    if (!db) return;
+    
+    return new Promise((resolve) => {
+      const transaction = db.transaction([this.name], 'readwrite');
+      const store = transaction.objectStore(this.name);
+      store.put({ key, value, timestamp: Date.now() });
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => resolve();
+    });
+  }
+}
+
+const suggestionsCache = new ApiCache('searchSuggestions');
+
+// ---------- API Services ----------
+export const searchService = {
+  async search(query, filters = {}, preferences = {}) {
+    try {
+      return await apiRequest('/search', {
+        method: 'POST',
+        body: { query, filters, preferences }
+      });
+    } catch (error) {
+      return handleError(error, "Search Request");
+    }
+  },
+
+  async getSuggestions(query) {
+    try {
+      if (!query || query.length < 2) return [];
+      
+      const cached = await suggestionsCache.get(query);
+      if (cached) return cached;
+      
+      const data = await apiRequest(
+        `/suggestions?q=${encodeURIComponent(query)}`, 
+        {}, 
+        false
+      );
+      
+      if (data && !data.error) {
+        await suggestionsCache.set(query, data);
+      }
+      return data;
+    } catch (error) {
+      return handleError(error, "Fetch Suggestions");
+    }
+  },
+
+  async getHistory() {
+    try {
+      return await apiRequest('/search/history');
+    } catch (error) {
+      return handleError(error, "Fetch History");
+    }
   }
 };
 
-export const getUserPreferences = () => {
-  try {
-    const preferences = localStorage.getItem('userPreferences');
-    return preferences ? JSON.parse(preferences) : {};
-  } catch (error) {
-    handleError("Échec du chargement des préférences.");
-    return {};
+// ---------- Secure Preferences Management ----------
+const safeStorage = {
+  get(key) {
+    try {
+      const data = localStorage.getItem(key);
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      handleError(error, "LocalStorage Read");
+      return null;
+    }
+  },
+
+  set(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (error) {
+      handleError(error, "LocalStorage Write");
+      return false;
+    }
   }
+};
+
+export const userPreferences = {
+  save(preferences) {
+    if (safeStorage.set('userPreferences', preferences)) {
+      toast.success("Préférences sauvegardées");
+    }
+  },
+
+  get() {
+    return safeStorage.get('userPreferences') || {};
+  },
+
+  clear() {
+    localStorage.removeItem('userPreferences');
+  }
+};
+
+// ---------- Utility Functions ----------
+export const apiUtils = {
+  generateRequestId: () => uuidv4(),
+  isApiError: (response) => response && response.error
 };

@@ -32,116 +32,187 @@ export default function Footer() {
   ];
 
   return (
-    <footer className="mt-12 px-6 py-10 backdrop-blur-lg bg-white/10 dark:bg-black/30 border-t border-white/20 shadow-inner text-white rounded-t-2xl transition-all duration-500">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between gap-10">
-        {/* Brand */}
-        <div className="flex-1 space-y-4">
-          <div className="flex items-center gap-2 text-xl font-bold">
-            <FaBrain className="text-blue-400 animate-pulse" />
-            <span>Moteur IA</span>
-          </div>
-          <p className="text-sm text-white/70">
-            Une nouvelle ère de recherche intelligente, propulsée par l'intelligence artificielle.
-          </p>
-        </div>
-
-        {/* Links */}
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold mb-2">Navigation</h3>
-          <ul className="space-y-1">
-            {links.map((link, index) => (
-              <li key={index}>
-                <Link
-                  to={link.url}
-                  className="text-white/80 hover:text-blue-400 transition"
+    <footer className="relative overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-[#0f172a] dark:to-[#1e293b] text-gray-800 dark:text-gray-200 pt-16 pb-8 px-4 sm:px-6 lg:px-8 transition-colors duration-500">
+      {/* Background elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute top-0 left-1/4 w-32 h-32 rounded-full bg-blue-400/10 dark:bg-blue-500/20 blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-0 right-1/3 w-40 h-40 rounded-full bg-purple-400/10 dark:bg-purple-500/20 blur-3xl animate-pulse delay-300"></div>
+      </div>
+      
+      <div className="relative max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
+          {/* Brand section */}
+          <div className="space-y-6">
+            <motion.div 
+              whileHover={{ scale: 1.05 }}
+              className="flex items-center gap-3 group"
+            >
+              <FaBrain className="text-2xl text-blue-600 dark:text-blue-400 animate-pulse transition-colors" />
+              <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-700 dark:from-blue-400 dark:to-purple-500 transition-all">
+                Moteur IA
+              </span>
+            </motion.div>
+            <p className="text-gray-600 dark:text-gray-300 leading-relaxed font-light">
+              Une nouvelle ère de recherche intelligente, propulsée par l'intelligence artificielle.
+            </p>
+            
+            {/* Social icons mobile */}
+            <div className="flex gap-4 md:hidden">
+              {socialLinks.map((social, index) => (
+                <motion.a
+                  key={index}
+                  href={social.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  whileHover={{ y: -3 }}
+                  whileTap={{ scale: 0.9 }}
+                  className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 text-xl transition-colors"
+                  aria-label={social.name}
                 >
-                  {link.title}
-                </Link>
-              </li>
+                  {social.icon}
+                </motion.a>
+              ))}
+            </div>
+          </div>
+
+          {/* Links */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Navigation</h3>
+            <ul className="space-y-3">
+              {links.map((link, index) => (
+                <motion.li 
+                  key={index}
+                  whileHover={{ x: 5 }}
+                >
+                  <Link
+                    to={link.url}
+                    className="text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400 transition-all flex items-center gap-2 group"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-blue-600 dark:bg-blue-400 opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                    {link.title}
+                  </Link>
+                </motion.li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Contact */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Contact</h3>
+            <ul className="space-y-3 text-gray-600 dark:text-gray-300">
+              <motion.li 
+                whileHover={{ x: 5 }}
+                className="flex items-center gap-2 group"
+              >
+                <span className="w-2 h-2 rounded-full bg-blue-600 dark:bg-blue-400 transition-colors"></span>
+                contact@moteuria.com
+              </motion.li>
+              <motion.li 
+                whileHover={{ x: 5 }}
+                className="flex items-center gap-2 group"
+              >
+                <span className="w-2 h-2 rounded-full bg-blue-600 dark:bg-blue-400"></span>
+                +33 1 23 45 67 89
+              </motion.li>
+              <motion.li 
+                whileHover={{ x: 5 }}
+                className="flex items-center gap-2 group"
+              >
+                <span className="w-2 h-2 rounded-full bg-blue-600 dark:bg-blue-400"></span>
+                Paris, France
+              </motion.li>
+            </ul>
+          </div>
+
+          {/* Newsletter */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Newsletter</h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">Recevez les dernières actualités sur l'IA</p>
+            
+            <motion.form 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="space-y-3"
+            >
+              <input
+                type="email"
+                placeholder="Votre email"
+                aria-label="Email pour newsletter"
+                className="w-full px-4 py-3 rounded-lg bg-white/80 dark:bg-gray-800/90 border border-gray-300 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-500/30 dark:focus:ring-blue-400/30 outline-none transition-all placeholder-gray-500 backdrop-blur-sm shadow-sm"
+              />
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                type="submit"
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-6 py-3 rounded-lg font-medium text-white shadow-lg hover:shadow-blue-500/30 dark:hover:shadow-blue-500/40 transition-all"
+              >
+                S'abonner
+              </motion.button>
+            </motion.form>
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="border-t border-gray-200 dark:border-gray-800 my-10"></div>
+
+        {/* Bottom section */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          {/* Copyright */}
+          <div className="text-gray-500 dark:text-gray-400 text-sm">
+            &copy; {currentYear} Moteur IA. Tous droits réservés.
+          </div>
+
+          {/* Legal links */}
+          <div className="flex gap-4">
+            <Link to="/mentions-legales" className="text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 text-sm transition-colors">
+              Mentions légales
+            </Link>
+            <Link to="/politique-cookies" className="text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 text-sm transition-colors">
+              Politique des cookies
+            </Link>
+          </div>
+
+          {/* Social icons desktop */}
+          <div className="hidden md:flex gap-4">
+            {socialLinks.map((social, index) => (
+              <motion.a
+                key={index}
+                href={social.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                whileHover={{ y: -3, color: '#2563EB' }}
+                whileTap={{ scale: 0.9 }}
+                className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 text-xl transition-all"
+                aria-label={social.name}
+              >
+                {social.icon}
+              </motion.a>
             ))}
-          </ul>
+          </div>
         </div>
 
-        {/* Contact */}
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold mb-2">Contact</h3>
-          <ul className="text-white/70 space-y-1 text-sm">
-            <li>contact@moteuria.com</li>
-            <li>+33 1 23 45 67 89</li>
-            <li>Paris, France</li>
-          </ul>
-        </div>
-
-        {/* Newsletter */}
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold mb-2">Restez informé</h3>
-          <form className="flex flex-col sm:flex-row gap-2">
-            <input
-              type="email"
-              placeholder="Votre email"
-              aria-label="Email pour newsletter"
-              className="px-4 py-2 rounded-lg bg-white/20 placeholder-white/60 text-white focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-            />
-            <button
-              type="submit"
-              className="bg-gradient-to-r from-purple-500 to-blue-500 px-4 py-2 rounded-lg hover:scale-105 transition"
-            >
-              S'abonner
-            </button>
-          </form>
-        </div>
-      </div>
-
-      {/* Secondary section */}
-      <div className="mt-10 border-t border-white/10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-white/60">
-        {/* Copyright */}
-        <div>&copy; {currentYear} Moteur de Recherche IA. Tous droits réservés.</div>
-
-        {/* Socials */}
-        <div className="flex gap-4">
-          {socialLinks.map((social, index) => (
-            <motion.a
-              whileHover={{ scale: 1.2, rotate: 5 }}
-              whileTap={{ scale: 0.95 }}
-              key={index}
-              href={social.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xl hover:text-blue-400 transition"
-              aria-label={`Suivez-nous sur ${social.name}`}
-            >
-              {social.icon}
-            </motion.a>
-          ))}
-        </div>
-
-        {/* Legal */}
-        <div className="flex gap-2 items-center">
-          <Link to="/mentions-legales" className="hover:text-blue-400">
-            Mentions légales
-          </Link>
-          <span>•</span>
-          <Link to="/politique-cookies" className="hover:text-blue-400">
-            Politique des cookies
-          </Link>
-        </div>
-      </div>
-
-      {/* IA Badge */}
-      <div className="mt-6 flex items-center justify-center gap-2 text-sm text-blue-400 font-medium">
-        <span>Propulsé par une IA de pointe</span>
-        <motion.div
-          className="w-2 h-2 rounded-full bg-blue-400"
-          animate={{
-            scale: [1, 1.5, 1],
-            opacity: [0.8, 0.2, 0.8],
-          }}
-          transition={{
-            duration: 1.5,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-        />
+        {/* AI Badge */}
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="mt-8 flex items-center justify-center gap-2 text-blue-600 dark:text-blue-400 font-medium"
+        >
+          <span>Propulsé par une IA de pointe</span>
+          <motion.div
+            className="w-2 h-2 rounded-full bg-blue-600 dark:bg-blue-400"
+            animate={{
+              scale: [1, 1.5, 1],
+              opacity: [0.8, 0.2, 0.8],
+            }}
+            transition={{
+              duration: 1.5,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          />
+        </motion.div>
       </div>
     </footer>
   );

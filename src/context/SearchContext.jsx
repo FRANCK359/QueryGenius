@@ -11,70 +11,57 @@ const defaultPreferences = {
 export function SearchProvider({ children }) {
   const [searchHistory, setSearchHistory] = useState(() => {
     const stored = localStorage.getItem('searchHistory');
-    return stored ? JSON.parse(stored) : [];
+    try {
+      return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+      console.error('Error loading search history from localStorage', e);
+      return [];
+    }
   });
 
   const [preferences, setPreferences] = useState(() => {
     const stored = localStorage.getItem('preferences');
-    return stored ? JSON.parse(stored) : defaultPreferences;
+    try {
+      return stored ? JSON.parse(stored) : defaultPreferences;
+    } catch (e) {
+      console.error('Error loading preferences from localStorage', e);
+      return defaultPreferences;
+    }
   });
 
-  const [userToken, setUserToken] = useState(() => {
-    return localStorage.getItem('userToken') || null;
-  });
-
-  const addToHistory = (query) => {
-    const newHistory = [
-      { query, timestamp: new Date().toISOString() },
-      ...searchHistory.filter((item) => item.query !== query)
-    ].slice(0, 10);
-
-    setSearchHistory(newHistory);
-    localStorage.setItem('searchHistory', JSON.stringify(newHistory));
-  };
-
-  const clearHistory = () => {
-    setSearchHistory([]);
-    localStorage.removeItem('searchHistory');
-  };
-
-  const updatePreferences = (newPrefs) => {
-    const updated = { ...preferences, ...newPrefs };
-    setPreferences(updated);
-    localStorage.setItem('preferences', JSON.stringify(updated));
-  };
-
-  const login = (token) => {
-    setUserToken(token);
-    localStorage.setItem('userToken', token);
-  };
-
-  const logout = () => {
-    setUserToken(null);
-    localStorage.removeItem('userToken');
-  };
-
-  // Synchronisation manuelle (utile si d'autres composants modifient le storage)
   useEffect(() => {
-    const syncStorage = () => {
-      const storedPrefs = localStorage.getItem('preferences');
-      if (storedPrefs) setPreferences(JSON.parse(storedPrefs));
-    };
-    window.addEventListener('storage', syncStorage);
-    return () => window.removeEventListener('storage', syncStorage);
-  }, []);
+    localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
+  }, [searchHistory]);
+
+  useEffect(() => {
+    localStorage.setItem('preferences', JSON.stringify(preferences));
+  }, [preferences]);
+
+  const addSearchToHistory = (searchQuery) => {
+    setSearchHistory((prevHistory) => {
+      const updatedHistory = [searchQuery, ...prevHistory.filter(item => item !== searchQuery)];
+      return updatedHistory.slice(0, 10); // Limite à 10 éléments dans l'historique
+    });
+  };
+
+  const removeSearchFromHistory = (searchQuery) => {
+    setSearchHistory((prevHistory) => prevHistory.filter(item => item !== searchQuery));
+  };
+
+  const resetPreferences = () => {
+    setPreferences(defaultPreferences);
+  };
 
   return (
     <SearchContext.Provider
       value={{
         searchHistory,
-        addToHistory,
-        clearHistory,
+        setSearchHistory,
+        addSearchToHistory,
+        removeSearchFromHistory,
         preferences,
-        updatePreferences,
-        userToken,
-        login,
-        logout
+        setPreferences,
+        resetPreferences
       }}
     >
       {children}
@@ -82,4 +69,6 @@ export function SearchProvider({ children }) {
   );
 }
 
-export const useSearch = () => useContext(SearchContext);
+export function useSearch() {
+  return useContext(SearchContext);
+}
